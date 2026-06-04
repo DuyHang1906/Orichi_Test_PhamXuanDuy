@@ -1,0 +1,54 @@
+.vd-page-bg {
+  background: #f1f1f1;
+  min-height: 100vh;
+}
+
+.vd-option-card {
+  border: 1px solid #e1e3e5;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fff;
+}
+
+.vd-option-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.vd-option-badge {
+  background: #e51c00;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.vd-delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #637381;
+  display: flex;
+  align-items: center;
+}
+
+.vd-delete-btn:hover {
+  color: #e51c00;
+}
+
+.vd-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.vd-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}

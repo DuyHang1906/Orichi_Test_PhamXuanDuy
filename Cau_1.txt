@@ -1,0 +1,156 @@
+Câu 1:
+1. Giải thích về Dependence Injection (DI) trong .Net:
+	- Dependence Injection là một mẫu thiết kế, trong đó các dependences (phụ thuộc) của một class (hoặc một hàm) được inject từ bên ngoài thay vì class tự khởi tạo ra chúng ở bên trong.
+	- Nguyên tắc hoạt động của DI:
+		+ Các module không giao tiếp trực tiếp với nhau, mà thông qua interface. Module cấp thấp sẽ implement đến interface, module cấp cao sẽ gọi đến module cấp thấp thông qua interface.
+		+ Việc khởi tạo module cấp thấp sẽ do DI container thực hiện.
+		+ Trong C# việc module nào gắn với interface nào sẽ được lập trình viên chủ động định rõ, thường là quy định trong file Program.cs. Đây là nơi lập trình viên viết các câu lệnh như AddScoped, AddTransient, AddSingleton để nói với DI Container rằng "khi nào có ai cần IOrderService thì hãy tạo ra một OrderService và inject vào"
+		Hoặc nó được tổ chức thành các Extension Method theo module nếu dự án có phình to.
+	- Các dạng DI:
+		+ Constructor Injection: là cách phổ biến nhất trong .NET — khi một class cần dependency nào, nó khai báo dependency đó như một tham số trong constructor. DI Container sẽ tự động nhìn vào constructor, tìm xem các tham số đó đã được đăng ký chưa, rồi tạo ra và truyền vào.
+		VD:
+			// Interface chung
+			public interface IMessageService
+			{
+				Task SendMessageAsync(string to, string message);
+			}
+			
+			// Các implementation khác nhau
+			public class SmsService : IMessageService
+			{
+				public async Task SendMessageAsync(string to, string message)
+				{
+					Console.WriteLine($"[SMS] Gửi đến {to}: {message}");
+				}
+			}
+
+			public class EmailService : IMessageService
+			{
+				public async Task SendMessageAsync(string to, string message)
+				{
+					Console.WriteLine($"[Email] Gửi đến {to}: {message}");
+				}
+			}
+			
+			// Class sử dụng — chỉ biết IMessageService, không quan tâm gửi bằng cách nào
+			public class NotificationService
+			{
+				private readonly IMessageService _messageService;
+
+				public NotificationService(IMessageService messageService)
+				{
+					_messageService = messageService;
+				}
+
+				public async Task NotifyAsync(string to, string message)
+				{
+					await _messageService.SendMessageAsync(to, message);
+				}
+			}
+			
+		+ Property Injection: Dependency được gán vào thông qua property public của class.
+		VD:
+			public class NotificationService
+			{
+				// Dependency được gán từ bên ngoài qua property
+				public IMessageService MessageService { get; set; }
+
+				public void Notify(string to, string message)
+				{
+					MessageService?.Send(to, message);
+				}
+			}
+
+			// Sử dụng
+			var service = new NotificationService();
+			service.MessageService = new EmailService(); // Gán dependency từ ngoài
+			service.Notify("user@gmail.com", "Xin chào!");
+
+		+ Method Injection: Dependency được truyền thẳng vào tham số của method khi gọi.
+		VD:
+			public class NotificationService
+			{
+				// Dependency truyền thẳng vào method khi cần dùng
+				public void Notify(IMessageService messageService, string to, string message)
+				{
+					messageService.Send(to, message);
+				}
+			}
+
+			// Sử dụng
+			var service = new NotificationService();
+			service.Notify(new EmailService(), "user@gmail.com", "Xin chào!");
+			service.Notify(new SmsService(),   "0909123456",     "Xin chào!");
+
+	- Lợi ích của DI:
+		+ Giảm sự phụ thuộc cứng giữ các class (Loose coupling): class không bị gán chặt với implementation cụ thể, chỉ quan tâm đến interface
+		+ Dễ thay đổi và mở rộng: các class giao tiếp qua interface nên việc thêm implementation mới k ảnh hưởng đến code hiện có.
+		+ Dễ viết unit test: Dễ dàng sử dụng mock object thay vì implementation thật, giúp test một cách độc lập mà k cần DB thật.
+		+ Quản lý vòng đời object tự động: việc tạo và hủy object do DI container đảm nhận
+
+2. Cách sử dụng nó trong .NET Core
+	- Bước 1: Tạo Interface và Implementation
+		+ Trước tiên cần định nghĩa interface và các class implement nó:
+		// Interface
+		public interface IMessageService
+		{
+			void Send(string to, string message);
+		}
+
+		// Implementation
+		public class EmailService : IMessageService
+		{
+			public void Send(string to, string message)
+			{
+				Console.WriteLine($"[Email] Gửi đến {to}: {message}");
+			}
+		}
+	
+	- Bước 2: Đăng kí vào DI container
+		+ Đây là nơi quy định interface nào gắn với implementation, thường thực hiện trong Program.cs
+		// Program.cs
+		var builder = WebApplication.CreateBuilder(args);
+
+		// Đăng ký — nói với Container "khi cần IMessageService thì dùng EmailService"
+		builder.Services.AddScoped<IMessageService, EmailService>();
+
+		var app = builder.Build();
+		app.Run();
+
+	- Bước 3 sử dụng trong class:
+		+ Class chỉ cần khai báo dependency trong constructor, Container tự động inject:
+		public class NotificationService
+		{
+			private readonly IMessageService _messageService;
+
+			// Container tự động truyền EmailService vào đây
+			public NotificationService(IMessageService messageService)
+			{
+				_messageService = messageService;
+			}
+
+			public void Notify(string to, string message)
+			{
+				_messageService.Send(to, message);
+			}
+		}
+
+	* Ba mức Lifetime khi đăng ký:
+	- AddTransient:  Tạo mới mỗi lần được inject
+		+ Dùng khi các service nhẹ, không lưu trạng thái bên trong, mỗi lần dùng cần một bản sạch hoàn toàn. 
+		+ Ví dụ như các class xử lý tính toán, format dữ liệu, gửi email.
+
+	- AddScoped: Tạo một lần, dùng chung trong cùng một HTTP Request
+		+ Dùng khiCác service cần chia sẻ trạng thái trong một request như DbContext, UnitOfWork. 
+		+ Đây là lifetime phổ biến nhất trong ứng dụng web vì đảm bảo tính nhất quán dữ liệu trong một request.
+
+	- AddSingleton: Tạo một lần duy nhất, dùng chung suốt vòng đời ứng dụng
+		+ Dùng khi các service tốn chi phí khởi tạo cao, hoặc cần chia sẻ trạng thái toàn cục như Cache, Configuration, Logger, Connection Pool.
+
+3. .NET framework có hỗ trợ trực tiếp Dependency Injection, nếu có, cách sử dụng như thế nào? nếu không, có cách nào để xử lý không?
+	- .NET Framework không có sẵn DI Container tích hợp như .NET Core. 
+	- Tuy nhiên hoàn toàn có thể sử dụng DI thông qua các thư viện bên thứ ba. 
+	- Các thư viện hỗ trợ tích hợp DI cho .Net Framework:
+		+ Autofac: phổ biến và mạnh nhất
+		+ Unity
+		+ ...

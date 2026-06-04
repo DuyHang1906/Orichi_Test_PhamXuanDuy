@@ -1,0 +1,18 @@
+Câu 3: Làm thế nào để tối ưu tốc độ truy vấn khi lưu trữ dữ liệu sự kiện hàng ngày trong SQL với 10 triệu bản ghi mỗi ngày? 
+a. Phân vùng bảng (Partitioning):
+    - Phân vùng bảng theo thời gian (ngày/tháng)
+    => CSDL chỉ scan đúng partition cần thiết thay vì toàn bộ bảng  → giảm mạnh thời gian truy vấn.
+b. Sử dụng index hợp lí:
+    - Sử dụng index ở các cột có tính trùng lặp thấp
+    => CSDL tìm kiếm qua cấu trúc B-Tree thay vì quét tuần tự toàn bảng → tốc độ truy vấn nhanh hơn nhiều lần, đặc biệt với bảng hàng trăm triệu dòng.
+c. Không SELECT *, chỉ SELECT các cột cần thiết
+    => Giảm lượng dữ liệu truyền từ CSDL về ứng dụng, tiết kiệm bộ nhớ và băng thông, đồng thời cho phép CSDL sử dụng Index-Only Scan khi các cột cần lấy đã có trong index.
+d. Tránh dùng hàm trên cột Where:
+    - Không bọc cột filter trong hàm vì sẽ phá vỡ index, thay vào đó biến đổi phía giá trị so sánh
+    => Giữ nguyên khả năng sử dụng index trên cột, tránh full table scan không cần thiết trên bảng hàng trăm triệu dòng.
+e. Sử dụng EXPLAIN ANALYZE để kiểm tra query plan:
+    - hạy EXPLAIN ANALYZE trước mọi query quan trọng để xem CSDL đang thực thi như thế nào, phát hiện Seq Scan không mong muốn
+    => Xác định chính xác bottleneck thay vì tối ưu mò → tiết kiệm thời gian, tập trung đúng chỗ cần cải thiện.
+f. Sử dụng cache
+
+g...
